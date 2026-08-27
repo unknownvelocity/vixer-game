@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vixer - Planet Defense Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a2e;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+
+        .game-container {
+            text-align: center;
+        }
+
+        .game-header {
+            margin-bottom: 10px;
+        }
+
+        .game-header h1 {
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff;
+            font-size: 28px;
+        }
+
+        canvas {
+            border: 3px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.5);
+            background: #0a0a2e;
+        }
+
+        .controls {
+            margin-top: 10px;
+            color: #888;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>🎮 VIXER - Planet Defense</h1>
+        </div>
+        <canvas id="gameCanvas" width="1200" height="700"></canvas>
+        <div class="controls">
+            🖱️ Click Asteroids | ⬆️ Upgrade Planet | [-] Galaxy View | [+] Normal View
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
