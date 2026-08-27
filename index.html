@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vixer - Planet Defense Game</title>
+    <title>VIXER - Planet Defense Game</title>
     <style>
         * {
             margin: 0;
@@ -17,13 +17,18 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
             color: white;
         }
 
         .game-container {
             text-align: center;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
         }
 
         .game-header {
@@ -33,7 +38,13 @@
         .game-header h1 {
             color: #00ffff;
             text-shadow: 0 0 20px #00ffff;
-            font-size: 28px;
+            font-size: clamp(20px, 5vw, 32px);
+        }
+
+        .game-header p {
+            color: #888;
+            font-size: clamp(12px, 2vw, 16px);
+            margin-top: 5px;
         }
 
         canvas {
@@ -41,12 +52,27 @@
             border-radius: 10px;
             box-shadow: 0 0 40px rgba(0, 255, 255, 0.5);
             background: #0a0a2e;
+            cursor: pointer;
+            /* Responsive scaling */
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
         }
 
         .controls {
             margin-top: 10px;
             color: #888;
-            font-size: 14px;
+            font-size: clamp(11px, 2vw, 14px);
+            flex-wrap: wrap;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .controls span {
+            margin: 0 10px;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -54,10 +80,15 @@
     <div class="game-container">
         <div class="game-header">
             <h1>🎮 VIXER - Planet Defense</h1>
+            <p>Survive the Black Hole. Protect Your Planet!</p>
         </div>
         <canvas id="gameCanvas" width="1200" height="700"></canvas>
         <div class="controls">
-            🖱️ Click Asteroids | ⬆️ Upgrade Planet | [-] Galaxy View | [+] Normal View
+            <span>🖱️ Click Asteroids</span>
+            <span>⬆️ Upgrade Planet</span>
+            <span>[-] Galaxy View</span>
+            <span>[+] Normal View</span>
+            <span>[R] Restart</span>
         </div>
     </div>
     <script src="game.js"></script>
