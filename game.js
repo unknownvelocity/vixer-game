@@ -25,6 +25,19 @@ const BLACK_HOLE_DISTANCE = 3000;
 const MAX_UPGRADE_LEVEL = 5;
 
 // ============================================================
+// Player Data & Stats (localStorage)
+// ============================================================
+let playerName = '';
+let savedStats = {
+    totalBlackHolesSurvived: 0,
+    totalAsteroidsCollected: 0,
+    totalEnergyCollected: 0,
+    lastEnergyBeforeBattle: 0,
+    gamesPlayed: 0
+};
+let lastEnergyBeforeBattle = 0; // current session
+
+// ============================================================
 // Game State Variables
 // ============================================================
 let state = 'PLAYING'; // PLAYING, BLACK_HOLE_ATTACK, BLACK_HOLE_BATTLE, GAME_OVER, SURVIVED
@@ -99,7 +112,7 @@ let asteroids = [];
 let particles = [];
 let floatingTexts = [];
 
-// Stats
+// Stats (current session)
 let blackHolesSurvived = 0;
 let totalAsteroidsCollected = 0;
 let specialAsteroidsCollected = 0;
@@ -113,7 +126,6 @@ let bgImageLoaded = false;
 // Assets Loading
 // ============================================================
 function loadAssets() {
-    // Try to load background image
     let img = new Image();
     img.onload = function() {
         galaxyBackground = img;
@@ -124,6 +136,39 @@ function loadAssets() {
         console.log('galaxy_bg.png not found - using procedural background');
     };
     img.src = 'galaxy_bg.png';
+}
+
+// ============================================================
+// Player Data Functions
+// ============================================================
+function loadPlayerData() {
+    let savedName = localStorage.getItem('vixer_playerName');
+    if (savedName) {
+        playerName = savedName;
+    } else {
+        playerName = prompt(
+            '👋 Welcome Commander! Enter your name:\n\n' +
+            '(Progress save hoga isi browser me. Dobara isi browser use karna.)',
+            'Player'
+        );
+        if (!playerName) playerName = 'Player';
+        localStorage.setItem('vixer_playerName', playerName);
+    }
+
+    let statsStr = localStorage.getItem('vixer_stats');
+    if (statsStr) {
+        savedStats = JSON.parse(statsStr);
+    }
+}
+
+function savePlayerData() {
+    savedStats.totalBlackHolesSurvived += blackHolesSurvived;
+    savedStats.totalAsteroidsCollected += totalAsteroidsCollected;
+    savedStats.totalEnergyCollected += totalEnergyCollected;
+    savedStats.lastEnergyBeforeBattle = lastEnergyBeforeBattle;
+    savedStats.gamesPlayed++;
+
+    localStorage.setItem('vixer_stats', JSON.stringify(savedStats));
 }
 
 // ============================================================
@@ -159,7 +204,6 @@ function initialize() {
     
     sunPulse = 0;
     
-    // Create planets
     planets = [
         { orbitRadius: 120, orbitSpeed: 0.03, angle: 45, size: 15, color: '#FF4444', name: 'Pyro', x: 0, y: 0 },
         { orbitRadius: 380, orbitSpeed: 0.01, angle: 180, size: 20, color: '#FF8844', name: 'Terra', x: 0, y: 0 },
@@ -199,7 +243,6 @@ function updateZoom(dt) {
         zoomLevel -= ZOOM_SPEED * dt;
         if (zoomLevel < targetZoom) zoomLevel = targetZoom;
     }
-    
     zoomTransition = (zoomLevel - MIN_ZOOM) / (GALAXY_ZOOM - MIN_ZOOM);
     zoomTransition = Math.max(0, Math.min(1, zoomTransition));
 }
@@ -275,32 +318,31 @@ function spawnAsteroid() {
     
     let side = Math.floor(Math.random() * 4);
     switch(side) {
-        case 0: // Top
+        case 0:
             ast.x = Math.random() * SCREEN_WIDTH;
             ast.y = -20;
             ast.vx = Math.random() * 100 - 50;
             ast.vy = Math.random() * 50 + 30;
             break;
-        case 1: // Bottom
+        case 1:
             ast.x = Math.random() * SCREEN_WIDTH;
             ast.y = SCREEN_HEIGHT + 20;
             ast.vx = Math.random() * 100 - 50;
             ast.vy = -(Math.random() * 50 + 30);
             break;
-        case 2: // Left
+        case 2:
             ast.x = -20;
             ast.y = Math.random() * SCREEN_HEIGHT;
             ast.vx = Math.random() * 50 + 30;
             ast.vy = Math.random() * 100 - 50;
             break;
-        case 3: // Right
+        case 3:
             ast.x = SCREEN_WIDTH + 20;
             ast.y = Math.random() * SCREEN_HEIGHT;
             ast.vx = -(Math.random() * 50 + 30);
             ast.vy = Math.random() * 100 - 50;
             break;
     }
-    
     asteroids.push(ast);
 }
 
@@ -316,7 +358,6 @@ function updateAsteroids(dt) {
             ast.active = false;
         }
     });
-    
     asteroids = asteroids.filter(ast => ast.active);
 }
 
@@ -395,6 +436,8 @@ function processUpgrade(type) {
 }
 
 function triggerBlackHole() {
+    lastEnergyBeforeBattle = energy; // store energy before battle
+    
     state = 'BLACK_HOLE_ATTACK';
     blackHole.active = true;
     blackHole.attacking = true;
@@ -466,12 +509,14 @@ function updateBattle(dt) {
             shieldVisual = 2.0;
             spawnParticles(vixer.x, vixer.y, '#00FF00', 50);
             showMessage('VICTORY! Vixer Survived!', '#00FF00');
+            savePlayerData(); // save after survival
         } else {
             state = 'GAME_OVER';
             spawnParticles(vixer.x, vixer.y, '#FF0000', 100);
             screenShake = 2.0;
             shakeIntensity = 20;
             showMessage('VIXER DESTROYED!', '#FF0000');
+            savePlayerData(); // save after game over
         }
     }
 }
@@ -568,7 +613,6 @@ function drawBackground() {
         ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     }
     
-    // Twinkling stars
     for (let i = 0; i < 150; i++) {
         let x = (i * 137) % SCREEN_WIDTH;
         let y = (i * 251) % SCREEN_HEIGHT;
@@ -593,7 +637,6 @@ function drawGalaxyMap() {
     ctx.textAlign = 'center';
     ctx.fillText('DEEP SPACE GALAXY VIEW', SCREEN_WIDTH/2, 35);
     
-    // Distant galaxies
     for (let i = 0; i < 50; i++) {
         let x = (i * 277) % SCREEN_WIDTH;
         let y = (i * 173) % SCREEN_HEIGHT;
@@ -603,7 +646,6 @@ function drawGalaxyMap() {
         ctx.fill();
     }
     
-    // Our galaxy
     let miniSunX = sunX * 0.3;
     let miniSunY = sunY * 0.3;
     ctx.fillStyle = '#FFFF00';
@@ -615,12 +657,10 @@ function drawGalaxyMap() {
     ctx.textAlign = 'center';
     ctx.fillText('OUR GALAXY', miniSunX, miniSunY - 30);
     
-    // Massive black hole
     let bhX = blackHole.galaxyX;
     let bhY = blackHole.galaxyY;
     let bhSize = blackHole.galaxySize;
     
-    // Glow
     ctx.fillStyle = 'rgba(50, 0, 50, 0.2)';
     ctx.beginPath();
     ctx.arc(bhX, bhY, bhSize + 40, 0, Math.PI * 2);
@@ -630,7 +670,6 @@ function drawGalaxyMap() {
     ctx.arc(bhX, bhY, bhSize + 20, 0, Math.PI * 2);
     ctx.fill();
     
-    // Main
     ctx.fillStyle = '#000000';
     ctx.beginPath();
     ctx.arc(bhX, bhY, bhSize, 0, Math.PI * 2);
@@ -648,14 +687,12 @@ function drawGalaxyMap() {
     ctx.arc(bhX, bhY, bhSize + 5, 0, Math.PI * 2);
     ctx.stroke();
     
-    // Accretion disk
     ctx.strokeStyle = 'rgba(255, 100, 0, 0.6)';
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(bhX, bhY, bhSize * 0.85, 0, Math.PI * 2);
     ctx.stroke();
     
-    // Labels
     ctx.fillStyle = '#FF0000';
     ctx.font = 'bold 25px Arial';
     ctx.textAlign = 'center';
@@ -664,18 +701,15 @@ function drawGalaxyMap() {
     ctx.font = '18px Arial';
     ctx.fillText('ANOTHER GALAXY', bhX, bhY - bhSize - 10);
     
-    // Distance
     ctx.fillStyle = '#FFFF00';
     ctx.font = '22px Arial';
     ctx.fillText(`DISTANCE: ${Math.floor(blackHole.distanceFromVixer)} LIGHT YEARS`, SCREEN_WIDTH/2, SCREEN_HEIGHT - 100);
     
-    // Warning
     let pulse = Math.sin(gameTime * 5) * 0.5 + 0.5;
     ctx.fillStyle = `rgb(255, ${Math.floor(100 + pulse * 155)}, 0)`;
     ctx.font = 'bold 30px Arial';
     ctx.fillText('! WARNING !', SCREEN_WIDTH/2, SCREEN_HEIGHT - 150);
     
-    // Path line
     ctx.strokeStyle = 'rgba(255, 0, 0, 0.4)';
     ctx.lineWidth = 3;
     ctx.setLineDash([10, 5]);
@@ -685,7 +719,6 @@ function drawGalaxyMap() {
     ctx.stroke();
     ctx.setLineDash([]);
     
-    // Animated particles along path
     for (let i = 0; i < 5; i++) {
         let t = (gameTime * 0.5 + i * 0.2) % 1;
         let px = miniSunX + (bhX - miniSunX) * t;
@@ -751,6 +784,18 @@ function drawUI() {
     ctx.fillText(`DEFENSE: ${getTotalDefense()}`, SCREEN_WIDTH - 190, 75);
     ctx.fillStyle = combo > 1 ? '#FF8800' : 'white';
     ctx.fillText(`COMBO: x${combo}`, SCREEN_WIDTH - 190, 95);
+    
+    // Player name and cumulative stats (right side)
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(playerName, SCREEN_WIDTH - 20, 20);
+    
+    ctx.fillStyle = '#CCCCCC';
+    ctx.font = '12px Arial';
+    ctx.fillText(`Total BH Survived: ${savedStats.totalBlackHolesSurvived}`, SCREEN_WIDTH - 20, 40);
+    ctx.fillText(`Total Asteroids: ${savedStats.totalAsteroidsCollected}`, SCREEN_WIDTH - 20, 55);
+    ctx.fillText(`Total Energy: ${savedStats.totalEnergyCollected.toFixed(1)}`, SCREEN_WIDTH - 20, 70);
     
     // Black hole countdown
     if (state === 'PLAYING') {
@@ -818,7 +863,6 @@ function drawUpgradeButton(x, y, w, h, label, level, cost, themeColor) {
     let canAfford = energy >= cost;
     let hovering = !maxed && isMouseOver(x, y, w, h);
     
-    // Background
     if (maxed) {
         ctx.fillStyle = 'rgba(35, 35, 40, 0.82)';
     } else if (hovering) {
@@ -829,12 +873,10 @@ function drawUpgradeButton(x, y, w, h, label, level, cost, themeColor) {
     }
     roundRect(ctx, x, y, w, h, 8, true, false);
     
-    // Border
     ctx.strokeStyle = maxed ? '#5A5A5A' : themeColor;
     ctx.lineWidth = 2;
     roundRect(ctx, x, y, w, h, 8, false, true);
     
-    // Text
     ctx.fillStyle = 'white';
     ctx.font = 'bold 15px Arial';
     ctx.textAlign = 'left';
@@ -854,7 +896,6 @@ function drawUpgradeButton(x, y, w, h, label, level, cost, themeColor) {
         ctx.fillText(`Cost: ${cost} E`, x + 10, y + 38);
     }
     
-    // Level pips
     for (let i = 0; i < MAX_UPGRADE_LEVEL; i++) {
         ctx.fillStyle = i < level ? themeColor : '#464650';
         ctx.fillRect(x + 118 + i * 14, y + 30, 10, 8);
@@ -964,7 +1005,6 @@ canvas.addEventListener('click', function(e) {
                 } else {
                     spawnFloatingText(ast.x, ast.y, 'ENERGY FULL!', '#FF0000');
                 }
-                
                 ast.active = false;
                 break;
             }
@@ -979,7 +1019,6 @@ document.addEventListener('keydown', function(e) {
     handleZoomInput(e);
     
     if (e.key === 'Escape') {
-        // Can't close browser tab, but can restart
         if (state === 'GAME_OVER') {
             initialize();
         }
@@ -990,7 +1029,6 @@ document.addEventListener('keydown', function(e) {
 // Main Draw Function
 // ============================================================
 function draw() {
-    // Compute shake offset
     shakeOffsetX = 0;
     shakeOffsetY = 0;
     if (screenShake > 0) {
@@ -1003,8 +1041,8 @@ function draw() {
     
     drawBackground();
     
-    // Orbit paths
     let sunScreen = worldToScreen(sunX, sunY);
+    
     ctx.strokeStyle = 'rgba(40, 40, 60, 0.5)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1017,7 +1055,6 @@ function draw() {
         ctx.stroke();
     });
     
-    // Sun
     let sunPulseSize = (sunSize + Math.sin(sunPulse) * 5) * zoomLevel;
     ctx.fillStyle = 'rgba(255, 200, 0, 0.2)';
     ctx.beginPath();
@@ -1036,7 +1073,6 @@ function draw() {
     ctx.arc(sunScreen.x, sunScreen.y, sunPulseSize * 0.7, 0, Math.PI * 2);
     ctx.fill();
     
-    // Planets
     planets.forEach(planet => {
         let pScreen = worldToScreen(planet.x, planet.y);
         let pSize = planet.size * zoomLevel;
@@ -1050,7 +1086,6 @@ function draw() {
         ctx.fillText(planet.name, pScreen.x, pScreen.y + pSize + 12);
     });
     
-    // Vixer
     let vScreen = worldToScreen(vixer.x, vixer.y);
     let vSize = vixer.size * zoomLevel;
     if (shieldVisual > 0) {
@@ -1075,7 +1110,6 @@ function draw() {
     ctx.textAlign = 'center';
     ctx.fillText('VIXER', vScreen.x, vScreen.y + vSize + 18);
     
-    // Asteroids
     asteroids.forEach(ast => {
         if (!ast.active) return;
         let aScreen = worldToScreen(ast.x, ast.y);
@@ -1111,7 +1145,6 @@ function draw() {
         }
     });
     
-    // Black hole (attack phase)
     if (blackHole.active) {
         let bScreen = worldToScreen(blackHole.x, blackHole.y);
         let pulseSize = (blackHole.size + Math.sin(blackHole.pulseTimer) * 5) * zoomLevel;
@@ -1134,7 +1167,6 @@ function draw() {
         ctx.fillText('BLACK HOLE', bScreen.x, bScreen.y - 30);
     }
     
-    // Particles
     particles.forEach(p => {
         let pScreen = worldToScreen(p.x, p.y);
         let alpha = Math.max(0, Math.min(1, p.life / p.maxLife));
@@ -1146,7 +1178,6 @@ function draw() {
     });
     ctx.globalAlpha = 1;
     
-    // Floating texts
     floatingTexts.forEach(ft => {
         let tScreen = worldToScreen(ft.x, ft.y);
         let alpha = Math.max(0, Math.min(1, ft.life / 1.5));
@@ -1160,10 +1191,7 @@ function draw() {
     
     ctx.restore();
     
-    // Galaxy view overlay
     drawGalaxyMap();
-    
-    // UI
     drawUI();
 }
 
@@ -1175,7 +1203,7 @@ let energy = 0;
 
 function gameLoop(timestamp) {
     if (!lastTime) lastTime = timestamp;
-    let dt = Math.min((timestamp - lastTime) / 1000, 0.05); // Cap dt to avoid jumps
+    let dt = Math.min((timestamp - lastTime) / 1000, 0.05);
     lastTime = timestamp;
     
     update(dt);
@@ -1188,6 +1216,7 @@ function gameLoop(timestamp) {
 // Start Game
 // ============================================================
 loadAssets();
+loadPlayerData();  // Load player name & stats before game starts
 initialize();
 requestAnimationFrame(gameLoop);
 
